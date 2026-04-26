@@ -5,12 +5,14 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
     <style>
         body { margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #111; }
         #map { height: 100vh; width: 100vw; } 
+        /* Makes the popup text a little easier to read */
+        .leaflet-popup-content-wrapper { background: #222; color: #fff; border-radius: 8px; }
+        .leaflet-popup-tip { background: #222; }
     </style>
 </head>
 <body>
@@ -26,71 +28,6 @@
             maxZoom: 20
         }).addTo(map);
 
-
-        // ==========================================
-        // SECTION A: CUSTOM TORNADO PATHS (GEOJSON)
-        // ==========================================
-        
-        // Paste the code you generate from geojson.io inside this variable.
-        var tornadoPathData = {
-
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "properties": {},
-      "geometry": {
-        "coordinates": [
-          [
-            -89.54144867736406,
-            44.44459890033005
-          ],
-          [
-            -89.53893319915652,
-            44.446812078402615
-          ],
-          [
-            -89.5377463185935,
-            44.448607852700434
-          ],
-          [
-            -89.53725030871706,
-            44.450213885834756
-          ],
-          [
-            -89.53735659652907,
-            44.4526038847703
-          ],
-          [
-            -89.53822461365715,
-            44.45355226994013
-          ],
-          [
-            -89.54042122843018,
-            44.45407071398867
-          ],
-          [
-            -89.54398187011871,
-            44.453526979868855
-          ]
-        ],
-        "type": "LineString"
-      }
-    }
-  ]
-};
-        // Draw the custom paths on the map in bold red
-        L.geoJSON(tornadoPathData, {
-            style: function (feature) {
-                return {color: '#ff0000', weight: 4, opacity: 0.8};
-            }
-        }).addTo(map);
-
-
-        // ==========================================
-        // SECTION B: LIVE STORM REPORTS (GOOGLE SHEETS)
-        // ==========================================
-
         var csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRHf5RxEScm0rx3RQmmdRhgjbkUs4UtbfT1DJ_cF9dL1_3kLFCq-j6HoBP5wzkrXvtIgb7Gw9-2WzeP/pub?gid=0&single=true&output=csv';
 
         Papa.parse(csvUrl, {
@@ -99,25 +36,38 @@
             skipEmptyLines: true,
             complete: function(results) {
                 results.data.forEach(function(row) {
-                    var lat = parseFloat(row.Latitude);
-                    var lng = parseFloat(row.Longitude);
+                    
+                    if (row.PathCoords && row.PathCoords.trim() !== "") {
+                        try {
 
-                    if (!isNaN(lat) && !isNaN(lng)) {
-                        var marker = L.marker([lat, lng]).addTo(map);
-                        
-                        var popupText = "<div style='font-size: 14px;'>" +
-                                        "<h3 style='margin:0 0 5px 0;'>" + (row.Name || "Report") + "</h3>" + 
-                                        "<b>Date:</b> " + (row.Date || "N/A") + "<br>" +
-                                        "<b>Severity:</b> " + (row.Severity || "N/A") + "<br>" +
-                                        "<p style='margin-top:8px;'>" + (row.Description || "") + "</p>" +
-                                        "</div>";
-                        
-                        marker.bindPopup(popupText);
+                            var coordsArray = JSON.parse(row.PathCoords);
+                            
+                            var feature = {
+                                "type": "Feature",
+                                "geometry": {
+                                    "type": "LineString",
+                                    "coordinates": coordsArray
+                                }
+                            };
+
+                            var pathLayer = L.geoJSON(feature, {
+                                style: { color: '#ff0000', weight: 5, opacity: 0.9 }
+                            }).addTo(map);
+
+                            var popupText = "<div style='font-size: 14px;'>" +
+                                            "<h3 style='margin:0 0 5px 0; color:#ff4444;'>" + (row.Name || "Report") + "</h3>" + 
+                                            "<b>Date:</b> " + (row.Date || "N/A") + "<br>" +
+                                            "<b>Severity:</b> " + (row.Severity || "N/A") + "<br>" +
+                                            "<p style='margin-top:8px;'>" + (row.Description || "") + "</p>" +
+                                            "</div>";
+                            
+                            pathLayer.bindPopup(popupText);
+
+                        } catch (e) {
+                            console.error("Could not draw path for: " + row.Name + ". Check that the brackets were copied perfectly.", e);
+                        }
                     }
                 });
-            },
-            error: function(err) {
-                console.error("Error reading the Google Sheet CSV:", err);
             }
         });
     </script>
