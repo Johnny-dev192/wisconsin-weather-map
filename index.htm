@@ -147,6 +147,38 @@
 
             document.getElementById('counter').innerText = "Showing " + count + " reports";
         }
-    </script>
+    
+	// Create the Legend Control
+        var legend = L.control({position: 'bottomright'});
+
+        legend.onAdd = function (map) {
+            // Create a new HTML div for the legend
+            var div = L.DomUtil.create('div', 'info legend');
+            
+            // Style the box to match your dark theme
+            div.style.backgroundColor = 'rgba(34, 34, 34, 0.9)';
+            div.style.padding = '10px';
+            div.style.borderRadius = '5px';
+            div.style.color = 'white';
+            div.style.fontSize = '13px';
+            div.style.lineHeight = '18px';
+            div.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+
+            // Add the text and colored squares
+            div.innerHTML += '<h4 style="margin: 0 0 8px 0;">Severity Key</h4>';
+            div.innerHTML += '<i style="background: #ff00ff; width: 12px; height: 12px; display: inline-block; margin-right: 6px;"></i> EF-5<br>';
+            div.innerHTML += '<i style="background: #ff0000; width: 12px; height: 12px; display: inline-block; margin-right: 6px;"></i> EF-4<br>';
+            div.innerHTML += '<i style="background: #ffa500; width: 12px; height: 12px; display: inline-block; margin-right: 6px;"></i> EF-3<br>';
+            div.innerHTML += '<i style="background: #ffff00; width: 12px; height: 12px; display: inline-block; margin-right: 6px;"></i> EF-2<br>';
+            div.innerHTML += '<i style="background: #00ff00; width: 12px; height: 12px; display: inline-block; margin-right: 6px;"></i> EF-1<br>';
+            div.innerHTML += '<i style="background: #00bfff; width: 12px; height: 12px; display: inline-block; margin-right: 6px;"></i> EF-0<br>';
+            div.innerHTML += '<i style="background: #aaaaaa; width: 12px; height: 12px; display: inline-block; margin-right: 6px;"></i> Funnel Cloud<br>';
+
+            return div;
+        };
+
+        // Add it to the map
+        legend.addTo(map);
+	</script>
 </body>
 </html>
