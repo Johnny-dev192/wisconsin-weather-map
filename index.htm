@@ -75,8 +75,13 @@
                                             "<h3 style='margin:0 0 5px 0; color:" + pathColor + ";'>" + (row.Name || "Report") + "</h3>" + 
                                             "<b>Date:</b> " + (row.Date || "N/A") + "<br>" +
                                             "<b>Severity:</b> " + (row.Severity || "N/A") + "<br>" +
-                                            "<p style='margin-top:8px;'>" + (row.Description || "") + "</p>" +
-                                            "</div>";
+                                            "<p style='margin-top:8px;'>" + (row.Description || "") + "</p>";
+                            
+                            if (row.Link && row.Link.trim() !== "") {
+                                popupText += "<a href='" + row.Link.trim() + "' target='_blank' style='display:inline-block; margin-top:5px; color:#00bfff; text-decoration:none; font-weight:bold;'>Read More Info &rarr;</a>";
+                            }
+
+                            popupText += "</div>";
                             
                             pathLayer.bindPopup(popupText);
 
