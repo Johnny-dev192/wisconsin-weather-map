@@ -2,96 +2,149 @@
 <html>
 <head>
     <title>Wisconsin Weather Watch Map</title>
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
     <style>
-        body { margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #111; }
-        #map { height: 100vh; width: 100vw; } 
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #111; color: white; }
+        #map { height: calc(100vh - 60px); width: 100vw; } 
+        
+        /* The Search & Filter Bar */
+        #controls { 
+            height: 60px; 
+            background: #222; 
+            display: flex; 
+            align-items: center; 
+            padding: 0 20px; 
+            gap: 15px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            z-index: 1001;
+            position: relative;
+        }
+        input, select { 
+            background: #333; 
+            color: white; 
+            border: 1px solid #444; 
+            padding: 8px 12px; 
+            border-radius: 4px;
+            outline: none;
+        }
+        input:focus { border-color: #00bfff; }
+        label { font-size: 14px; font-weight: bold; }
+
         .leaflet-popup-content-wrapper { background: #222; color: #fff; border-radius: 8px; }
         .leaflet-popup-tip { background: #222; }
     </style>
 </head>
 <body>
 
+    <div id="controls">
+        <div>
+            <label>Search Date:</label>
+            <input type="text" id="dateSearch" placeholder="e.g. 04/25/2026" oninput="filterData()">
+        </div>
+        <div>
+            <label>Severity:</label>
+            <select id="severityFilter" onchange="filterData()">
+                <option value="ALL">All Ratings</option>
+                <option value="EF-0">EF-0</option>
+                <option value="EF-1">EF-1</option>
+                <option value="EF-2">EF-2</option>
+                <option value="EF-3">EF-3</option>
+                <option value="EF-4">EF-4</option>
+                <option value="EF-5">EF-5</option>
+                <option value="FUNNEL">Funnel Clouds</option>
+            </select>
+        </div>
+        <div id="counter" style="margin-left: auto; color: #aaa; font-size: 13px;">
+            Showing all reports
+        </div>
+    </div>
+
     <div id="map"></div>
 
     <script>
         var map = L.map('map').setView([44.5, -89.5], 7);
+        var pathGroup = L.featureGroup().addTo(map);
+        var allData = []; // This is our "Memory Bank"
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            attribution: '&copy; OSM contributors &copy; CARTO',
             subdomains: 'abcd',
             maxZoom: 20
         }).addTo(map);
 
-        var csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRHf5RxEScm0rx3RQmmdRhgjbkUs4UtbfT1DJ_cF9dL1_3kLFCq-j6HoBP5wzkrXvtIgb7Gw9-2WzeP/pub?gid=0&single=true&output=csv';
-
         function getTornadoColor(severity) {
-
             if (!severity) return '#ffffff'; 
-            
             var sev = severity.trim().toUpperCase();
-
-            if (sev === 'EF-0' || sev === 'EF0') return '#00bfff'; // Light Blue
-            if (sev === 'EF-1' || sev === 'EF1') return '#00ff00'; // Green
-            if (sev === 'EF-2' || sev === 'EF2') return '#ffff00'; // Yellow
-            if (sev === 'EF-3' || sev === 'EF3') return '#ffa500'; // Orange
-            if (sev === 'EF-4' || sev === 'EF4') return '#ff0000'; // Red
-            if (sev === 'EF-5' || sev === 'EF5') return '#ff00ff'; // Purple/Magenta
-            if (sev === 'FUNNEL CLOUD' || sev === 'FUNNEL') return '#aaaaaa'; // Gray
-            
-            return '#ffffff'; // Default color for any typos or unknown severities
+            if (sev.includes('EF0')) return '#00bfff';
+            if (sev.includes('EF1')) return '#00ff00';
+            if (sev.includes('EF2')) return '#ffff00';
+            if (sev.includes('EF3')) return '#ffa500';
+            if (sev.includes('EF4')) return '#ff0000';
+            if (sev.includes('EF5')) return '#ff00ff';
+            if (sev.includes('FUNNEL')) return '#aaaaaa';
+            return '#ffffff';
         }
+
+        // REPLACE THIS WITH YOUR GOOGLE SHEET CSV LINK
+        var csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRHf5RxEScm0rx3RQmmdRhgjbkUs4UtbfT1DJ_cF9dL1_3kLFCq-j6HoBP5wzkrXvtIgb7Gw9-2WzeP/pub?gid=0&single=true&output=csv';
 
         Papa.parse(csvUrl, {
             download: true,
             header: true,
             skipEmptyLines: true,
             complete: function(results) {
-                results.data.forEach(function(row) {
-                    
-                    if (row.PathCoords && row.PathCoords.trim() !== "") {
-                        try {
-                            var coordsArray = JSON.parse(row.PathCoords);
-                            
-                            var feature = {
-                                "type": "Feature",
-                                "geometry": {
-                                    "type": "LineString",
-                                    "coordinates": coordsArray
-                                }
-                            };
-
-                            var pathColor = getTornadoColor(row.Severity);
-
-                            var pathLayer = L.geoJSON(feature, {
-                                style: { color: pathColor, weight: 5, opacity: 0.9 }
-                            }).addTo(map);
-
-                            var popupText = "<div style='font-size: 14px;'>" +
-                                            "<h3 style='margin:0 0 5px 0; color:" + pathColor + ";'>" + (row.Name || "Report") + "</h3>" + 
-                                            "<b>Date:</b> " + (row.Date || "N/A") + "<br>" +
-                                            "<b>Severity:</b> " + (row.Severity || "N/A") + "<br>" +
-                                            "<p style='margin-top:8px;'>" + (row.Description || "") + "</p>";
-                            
-                            if (row.Link && row.Link.trim() !== "") {
-                                popupText += "<a href='" + row.Link.trim() + "' target='_blank' style='display:inline-block; margin-top:5px; color:#00bfff; text-decoration:none; font-weight:bold;'>Read More Info &rarr;</a>";
-                            }
-
-                            popupText += "</div>";
-                            
-                            pathLayer.bindPopup(popupText);
-
-                        } catch (e) {
-                            console.error("Could not draw path for: " + row.Name, e);
-                        }
-                    }
-                });
+                allData = results.data; // Save data to memory
+                filterData(); // Initial draw
             }
         });
+
+        function filterData() {
+            var dateQuery = document.getElementById('dateSearch').value.toLowerCase();
+            var severityQuery = document.getElementById('severityFilter').value;
+            
+            // Clear the map before redrawing
+            pathGroup.clearLayers();
+            var count = 0;
+
+            allData.forEach(function(row) {
+                var rowDate = (row.Date || "").toLowerCase();
+                var rowSev = (row.Severity || "").toUpperCase();
+                
+                // CHECK: Does this row match our search and filter?
+                var matchesDate = rowDate.includes(dateQuery);
+                var matchesSeverity = (severityQuery === "ALL") || rowSev.includes(severityQuery);
+
+                if (matchesDate && matchesSeverity && row.PathCoords) {
+                    try {
+                        var coordsArray = JSON.parse(row.PathCoords);
+                        var pathColor = getTornadoColor(row.Severity);
+
+                        var pathLayer = L.geoJSON({
+                            "type": "Feature",
+                            "geometry": { "type": "LineString", "coordinates": coordsArray }
+                        }, {
+                            style: { color: pathColor, weight: 5, opacity: 0.9 }
+                        }).addTo(pathGroup);
+
+                        var popupText = "<div style='font-size: 14px;'>" +
+                                        "<h3 style='margin:0 0 5px 0; color:" + pathColor + ";'>" + (row.Name || "Report") + "</h3>" + 
+                                        "<b>Date:</b> " + (row.Date || "N/A") + "<br>" +
+                                        "<b>Severity:</b> " + (row.Severity || "N/A") + "<br>" +
+                                        "<p style='margin-top:8px;'>" + (row.Description || "") + "</p>" +
+                                        (row.Link ? "<a href='" + row.Link + "' target='_blank' style='color:#00bfff; font-weight:bold;'>Read More &rarr;</a>" : "") +
+                                        "</div>";
+                        
+                        pathLayer.bindPopup(popupText);
+                        count++;
+                    } catch (e) { console.error("Error drawing path", e); }
+                }
+            });
+
+            document.getElementById('counter').innerText = "Showing " + count + " reports";
+        }
     </script>
 </body>
 </html>
