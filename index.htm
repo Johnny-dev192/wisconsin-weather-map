@@ -75,17 +75,19 @@
             maxZoom: 20
         }).addTo(map);
 
-        function getTornadoColor(severity) {
+       function getTornadoColor(severity) {
             if (!severity) return '#ffffff'; 
             var sev = severity.trim().toUpperCase();
-            if (sev.includes('EF0')) return '#00bfff';
-            if (sev.includes('EF1')) return '#00ff00';
-            if (sev.includes('EF2')) return '#ffff00';
-            if (sev.includes('EF3')) return '#ffa500';
-            if (sev.includes('EF4')) return '#ff0000';
-            if (sev.includes('EF5')) return '#ff00ff';
-            if (sev.includes('FUNNEL')) return '#aaaaaa';
-            return '#ffffff';
+            
+            if (sev === 'EF-0' || sev === 'EF0') return '#00bfff'; 
+            if (sev === 'EF-1' || sev === 'EF1') return '#00ff00'; 
+            if (sev === 'EF-2' || sev === 'EF2') return '#ffff00'; 
+            if (sev === 'EF-3' || sev === 'EF3') return '#ffa500'; 
+            if (sev === 'EF-4' || sev === 'EF4') return '#ff0000'; 
+            if (sev === 'EF-5' || sev === 'EF5') return '#ff00ff'; 
+            if (sev === 'FUNNEL CLOUD' || sev === 'FUNNEL') return '#aaaaaa'; 
+            
+            return '#ffffff'; 
         }
 
         // REPLACE THIS WITH YOUR GOOGLE SHEET CSV LINK
