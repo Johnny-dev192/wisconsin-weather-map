@@ -10,7 +10,6 @@
     <style>
         body { margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #111; }
         #map { height: 100vh; width: 100vw; } 
-        /* Makes the popup text a little easier to read */
         .leaflet-popup-content-wrapper { background: #222; color: #fff; border-radius: 8px; }
         .leaflet-popup-tip { background: #222; }
     </style>
@@ -30,6 +29,23 @@
 
         var csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRHf5RxEScm0rx3RQmmdRhgjbkUs4UtbfT1DJ_cF9dL1_3kLFCq-j6HoBP5wzkrXvtIgb7Gw9-2WzeP/pub?gid=0&single=true&output=csv';
 
+        function getTornadoColor(severity) {
+
+            if (!severity) return '#ffffff'; 
+            
+            var sev = severity.trim().toUpperCase();
+
+            if (sev === 'EF-0' || sev === 'EF0') return '#00bfff'; // Light Blue
+            if (sev === 'EF-1' || sev === 'EF1') return '#00ff00'; // Green
+            if (sev === 'EF-2' || sev === 'EF2') return '#ffff00'; // Yellow
+            if (sev === 'EF-3' || sev === 'EF3') return '#ffa500'; // Orange
+            if (sev === 'EF-4' || sev === 'EF4') return '#ff0000'; // Red
+            if (sev === 'EF-5' || sev === 'EF5') return '#ff00ff'; // Purple/Magenta
+            if (sev === 'FUNNEL CLOUD' || sev === 'FUNNEL') return '#aaaaaa'; // Gray
+            
+            return '#ffffff'; // Default color for any typos or unknown severities
+        }
+
         Papa.parse(csvUrl, {
             download: true,
             header: true,
@@ -39,7 +55,6 @@
                     
                     if (row.PathCoords && row.PathCoords.trim() !== "") {
                         try {
-
                             var coordsArray = JSON.parse(row.PathCoords);
                             
                             var feature = {
@@ -50,12 +65,14 @@
                                 }
                             };
 
+                            var pathColor = getTornadoColor(row.Severity);
+
                             var pathLayer = L.geoJSON(feature, {
-                                style: { color: '#ff0000', weight: 5, opacity: 0.9 }
+                                style: { color: pathColor, weight: 5, opacity: 0.9 }
                             }).addTo(map);
 
                             var popupText = "<div style='font-size: 14px;'>" +
-                                            "<h3 style='margin:0 0 5px 0; color:#ff4444;'>" + (row.Name || "Report") + "</h3>" + 
+                                            "<h3 style='margin:0 0 5px 0; color:" + pathColor + ";'>" + (row.Name || "Report") + "</h3>" + 
                                             "<b>Date:</b> " + (row.Date || "N/A") + "<br>" +
                                             "<b>Severity:</b> " + (row.Severity || "N/A") + "<br>" +
                                             "<p style='margin-top:8px;'>" + (row.Description || "") + "</p>" +
@@ -64,7 +81,7 @@
                             pathLayer.bindPopup(popupText);
 
                         } catch (e) {
-                            console.error("Could not draw path for: " + row.Name + ". Check that the brackets were copied perfectly.", e);
+                            console.error("Could not draw path for: " + row.Name, e);
                         }
                     }
                 });
