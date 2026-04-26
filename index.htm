@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wisconsin Weather Watch Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+
+    <style>
+        #map { height: 600px; width: 100%; border: 2px solid #ccc; }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+    </style>
+</head>
+<body>
+
+    <h2>Live Wisconsin Tornado Reports</h2>
+    <p>If you don't see pins, right-click -> Inspect -> Console.</p>
+    <div id="map"></div>
+
+    <script>
+        // 1. Setup the map centered on Central Wisconsin
+        var map = L.map('map').setView([44.5, -89.5], 7);
+
+        // 2. Add the Esri map background (Fixes the 403 error for local testing)
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri'
+        }).addTo(map);
+
+        // 3. REPLACE THIS WITH YOUR GOOGLE SHEET CSV LINK
+        // Ensure it has output=csv AND gid= (which proves it's pointing to Sheet1)
+        var csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRHf5RxEScm0rx3RQmmdRhgjbkUs4UtbfT1DJ_cF9dL1_3kLFCq-j6HoBP5wzkrXvtIgb7Gw9-2WzeP/pub?gid=0&single=true&output=csv';
+
+        // 4. Read the Google Sheet and map the points
+        Papa.parse(csvUrl, {
+            download: true,
+            header: true,
+            skipEmptyLines: true, // This automatically fixes the "empty bottom rows" bug!
+            complete: function(results) {
+                console.log("SUCCESS! PapaParse read the file. Here is the data:", results.data);
+                
+                // This will print your exact column headers to the console to check for ghost spaces
+                if (results.data.length > 0) {
+                    console.log("The column headers the code sees are:", Object.keys(results.data[0]));
+                }
+
+                var pointsAdded = 0;
+
+                results.data.forEach(function(row, index) {
+                    // parseFloat forces the code to read the text as a math number
+                    var lat = parseFloat(row.Latitude);
+                    var lng = parseFloat(row.Longitude);
+
+                    // Check if lat and lng are actual numbers before drawing
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        var marker = L.marker([lat, lng]).addTo(map);
+                        var popupText = "<b>" + (row.Name || "Unnamed") + "</b><br>" + (row.Description || "");
+                        marker.bindPopup(popupText);
+                        pointsAdded++;
+                    } else {
+                        // If it fails, it tells you exactly which row failed
+                        console.warn("Row " + (index + 2) + " skipped. Missing or invalid coordinates:", row);
+                    }
+                });
+
+                console.log("Finished. Added " + pointsAdded + " pins to the map.");
+            },
+            error: function(err) {
+                console.error("CRITICAL ERROR reading the CSV link:", err);
+            }
+        });
+    </script>
+</body>
+</html>
