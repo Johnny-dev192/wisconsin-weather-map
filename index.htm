@@ -90,7 +90,6 @@
             return '#ffffff'; 
         }
 
-        // REPLACE THIS WITH YOUR GOOGLE SHEET CSV LINK
         var csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRHf5RxEScm0rx3RQmmdRhgjbkUs4UtbfT1DJ_cF9dL1_3kLFCq-j6HoBP5wzkrXvtIgb7Gw9-2WzeP/pub?gid=0&single=true&output=csv';
 
         Papa.parse(csvUrl, {
@@ -115,7 +114,6 @@
                 var rowDate = (row.Date || "").toLowerCase();
                 var rowSev = (row.Severity || "").toUpperCase();
                 
-                // CHECK: Does this row match our search and filter?
                 var matchesDate = rowDate.includes(dateQuery);
                 var matchesSeverity = (severityQuery === "ALL") || rowSev.includes(severityQuery);
 
@@ -131,12 +129,18 @@
                             style: { color: pathColor, weight: 5, opacity: 0.9 }
                         }).addTo(pathGroup);
 
+                        var formattedDescription = "";
+                        if (row.Description) {
+
+                            formattedDescription = row.Description.replace(/\n/g, "<br>");
+                        }
+
                         var popupText = "<div style='font-size: 14px;'>" +
                                         "<h3 style='margin:0 0 5px 0; color:" + pathColor + ";'>" + (row.Name || "Report") + "</h3>" + 
                                         "<b>Date:</b> " + (row.Date || "N/A") + "<br>" +
                                         "<b>Severity:</b> " + (row.Severity || "N/A") + "<br>" +
-                                        "<p style='margin-top:8px;'>" + (row.Description || "") + "</p>" +
-                                        (row.Link ? "<a href='" + row.Link + "' target='_blank' style='color:#00bfff; font-weight:bold;'>Read More &rarr;</a>" : "") +
+                                        "<p style='margin-top:8px;'>" + formattedDescription + "</p>" +
+                                        (row.Link ? "<a href='" + row.Link + "' target='_blank' style='display:inline-block; margin-top:5px; color:#00bfff; font-weight:bold;'>Read More &rarr;</a>" : "") +
                                         "</div>";
                         
                         pathLayer.bindPopup(popupText);
@@ -155,7 +159,7 @@
             // Create a new HTML div for the legend
             var div = L.DomUtil.create('div', 'info legend');
             
-            // Style the box to match your dark theme
+            // Style the box to match dark theme
             div.style.backgroundColor = 'rgba(34, 34, 34, 0.9)';
             div.style.padding = '10px';
             div.style.borderRadius = '5px';
